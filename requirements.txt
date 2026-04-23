@@ -1,0 +1,11 @@
+requests
+beautifulsoup4
+fastapi
+uvicorn[standard]
+pymupdf
+pandas
+httpx
+python-dotenv
+playwright
+striprtf
+openpyxl

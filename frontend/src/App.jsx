@@ -1,0 +1,638 @@
+import { useEffect, useMemo, useState } from "react";
+import {
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  Legend,
+  CartesianGrid,
+} from "recharts";
+
+const STATUS_ORDER = [
+  "full_data",
+  "partial_data",
+  "no_data",
+  "unanalyzed_repo",
+  "no_repository",
+];
+
+const STATUS_LABELS = {
+  full_data: "Full data",
+  partial_data: "Partial data",
+  no_data: "No data",
+  unanalyzed_repo: "Has repo, no README",
+  no_repository: "No repository",
+};
+
+const STATUS_COLORS = {
+  full_data: "#16a34a",
+  partial_data: "#eab308",
+  no_data: "#dc2626",
+  unanalyzed_repo: "#94a3b8",
+  no_repository: "#cbd5e1",
+};
+
+const BASE = import.meta.env.BASE_URL;
+
+function dataUrl(path) {
+  return `${BASE}data/${path}`;
+}
+
+function pct(n, total) {
+  if (!total) return "";
+  return `${((100 * n) / total).toFixed(1)}%`;
+}
+
+function repositoryUrl(repo) {
+  const doi = (repo.repo_doi || "").trim();
+  const host = (repo.repo_host || "").trim().toLowerCase();
+  if (!doi) return null;
+  if (doi.startsWith("http://") || doi.startsWith("https://")) return doi;
+  if (host === "openicpsr" && repo.icpsr_project_id) {
+    return `https://www.openicpsr.org/openicpsr/project/${repo.icpsr_project_id}/version/V1/view`;
+  }
+  return `https://doi.org/${doi}`;
+}
+
+function repositoryLabel(repo) {
+  const host = (repo.repo_host || "repository").toLowerCase();
+  if (host === "openicpsr" && repo.icpsr_project_id) return `openicpsr/${repo.icpsr_project_id}`;
+  if (repo.repo_doi) return `${host}/${repo.repo_doi}`;
+  return host;
+}
+
+function StatusBadge({ status }) {
+  const color = STATUS_COLORS[status] || "#94a3b8";
+  return (
+    <span
+      className="inline-block px-2 py-0.5 rounded text-xs font-medium text-white"
+      style={{ backgroundColor: color }}
+    >
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
+}
+
+function Overview() {
+  const [data, setData] = useState(null);
+  useEffect(() => {
+    fetch(dataUrl("stats-overview.json"))
+      .then((r) => r.json())
+      .then(setData);
+  }, []);
+  if (!data) return <p className="text-gray-500">Loading…</p>;
+  const total = data.total_papers;
+  return (
+    <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      {STATUS_ORDER.map((s) => {
+        const n = data.by_status[s] || 0;
+        return (
+          <div
+            key={s}
+            className="p-4 rounded-lg shadow-sm border border-gray-200 bg-white"
+          >
+            <div className="text-xs text-gray-500 uppercase tracking-wide">
+              {STATUS_LABELS[s]}
+            </div>
+            <div
+              className="text-2xl font-bold mt-1"
+              style={{ color: STATUS_COLORS[s] }}
+            >
+              {n.toLocaleString()}
+            </div>
+            <div className="text-xs text-gray-400">{pct(n, total)}</div>
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function ByYearChart() {
+  const [allData, setAllData] = useState([]);
+  const [papers, setPapers] = useState([]);
+  const [journals, setJournals] = useState([]);
+  const [selectedJournal, setSelectedJournal] = useState("");
+
+  useEffect(() => {
+    fetch(dataUrl("stats-by-year.json"))
+      .then((r) => r.json())
+      .then(setAllData);
+    fetch(dataUrl("papers.json"))
+      .then((r) => r.json())
+      .then((p) => {
+        setPapers(p);
+        const js = [...new Set(p.map((x) => x.journal_name).filter(Boolean))].sort();
+        setJournals(js);
+      });
+  }, []);
+
+  const data = useMemo(() => {
+    if (!selectedJournal) return allData;
+    const byYear = {};
+    papers
+      .filter((p) => p.journal_name === selectedJournal && p.publication_year)
+      .forEach((p) => {
+        const y = p.publication_year;
+        if (!byYear[y]) byYear[y] = { year: y, total: 0 };
+        const s = p.replication_status || "unanalyzed_repo";
+        byYear[y][s] = (byYear[y][s] || 0) + 1;
+        byYear[y].total += 1;
+      });
+    return Object.values(byYear).sort((a, b) => a.year - b.year);
+  }, [allData, papers, selectedJournal]);
+
+  if (!allData.length) return null;
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-sm font-semibold text-gray-700">
+          Data availability by year
+        </h3>
+        <select
+          value={selectedJournal}
+          onChange={(e) => setSelectedJournal(e.target.value)}
+          className="text-xs border border-gray-300 rounded px-2 py-1"
+        >
+          <option value="">All journals</option>
+          {journals.map((j) => (
+            <option key={j} value={j}>
+              {j}
+            </option>
+          ))}
+        </select>
+      </div>
+      <ResponsiveContainer width="100%" height={320}>
+        <BarChart data={data}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#e5e7eb" />
+          <XAxis dataKey="year" tick={{ fontSize: 11 }} />
+          <YAxis tick={{ fontSize: 11 }} />
+          <Tooltip />
+          <Legend wrapperStyle={{ fontSize: 11 }} />
+          {STATUS_ORDER.map((s) => (
+            <Bar
+              key={s}
+              dataKey={s}
+              stackId="status"
+              fill={STATUS_COLORS[s]}
+              name={STATUS_LABELS[s]}
+            />
+          ))}
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function ByJournalTable({ yearStart, yearEnd }) {
+  const [data, setData] = useState([]);
+  useEffect(() => {
+    fetch(dataUrl("stats-by-journal.json"))
+      .then((r) => r.json())
+      .then(setData);
+  }, [yearStart, yearEnd]);
+  if (!data.length) return null;
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">
+        Status by journal ({yearStart}–{yearEnd})
+      </h3>
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500 border-b border-gray-200">
+              <th className="px-2 py-1 font-semibold">Journal</th>
+              <th className="px-2 py-1 font-semibold text-right">Papers</th>
+              {STATUS_ORDER.map((s) => (
+                <th key={s} className="px-2 py-1 font-semibold text-right">
+                  {STATUS_LABELS[s]}
+                </th>
+              ))}
+            </tr>
+          </thead>
+          <tbody>
+            {data.map((row) => (
+              <tr key={row.journal} className="border-b border-gray-100">
+                <td className="px-2 py-1.5 text-gray-800">{row.journal}</td>
+                <td className="px-2 py-1.5 text-right font-medium">
+                  {row.total}
+                </td>
+                {STATUS_ORDER.map((s) => {
+                  const n = row[s] || 0;
+                  return (
+                    <td key={s} className="px-2 py-1.5 text-right">
+                      <span className="text-gray-800">{n}</span>
+                      <span className="text-gray-400 text-xs ml-1">
+                        ({pct(n, row.total)})
+                      </span>
+                    </td>
+                  );
+                })}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function PaperBrowser() {
+  const [filters, setFilters] = useState({
+    year_start: 2000,
+    year_end: 2026,
+    journal: "",
+    status: "",
+  });
+  const [allPapers, setAllPapers] = useState([]);
+  const [journals, setJournals] = useState([]);
+  const [page, setPage] = useState(0);
+  const [selectedDoi, setSelectedDoi] = useState(null);
+  const limit = 25;
+
+  useEffect(() => {
+    fetch(dataUrl("journals.json"))
+      .then((r) => r.json())
+      .then(setJournals);
+    fetch(dataUrl("papers.json"))
+      .then((r) => r.json())
+      .then(setAllPapers);
+  }, []);
+
+  const filtered = useMemo(() => {
+    return allPapers.filter((p) => {
+      if (filters.year_start && p.publication_year < filters.year_start) return false;
+      if (filters.year_end && p.publication_year > filters.year_end) return false;
+      if (filters.journal && p.journal_name !== filters.journal) return false;
+      if (filters.status && p.replication_status !== filters.status) return false;
+      return true;
+    });
+  }, [allPapers, filters]);
+
+  const pageItems = useMemo(() => {
+    const start = page * limit;
+    return filtered.slice(start, start + limit);
+  }, [filtered, page]);
+
+  const total = filtered.length;
+
+  const detail = useMemo(() => {
+    if (!selectedDoi) return null;
+    return allPapers.find((p) => p.doi === selectedDoi) || null;
+  }, [selectedDoi, allPapers]);
+
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <h3 className="text-sm font-semibold text-gray-700 mb-3">
+        Browse papers
+      </h3>
+
+      <div className="flex flex-wrap gap-3 mb-4 text-sm">
+        <div>
+          <label className="text-xs text-gray-500 block">Year range</label>
+          <div className="flex gap-1">
+            <input
+              type="number"
+              value={filters.year_start}
+              onChange={(e) => {
+                setFilters({ ...filters, year_start: +e.target.value });
+                setPage(0);
+              }}
+              className="w-20 border border-gray-300 rounded px-2 py-1"
+            />
+            <span className="self-center">–</span>
+            <input
+              type="number"
+              value={filters.year_end}
+              onChange={(e) => {
+                setFilters({ ...filters, year_end: +e.target.value });
+                setPage(0);
+              }}
+              className="w-20 border border-gray-300 rounded px-2 py-1"
+            />
+          </div>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block">Journal</label>
+          <select
+            value={filters.journal}
+            onChange={(e) => {
+              setFilters({ ...filters, journal: e.target.value });
+              setPage(0);
+            }}
+            className="border border-gray-300 rounded px-2 py-1"
+          >
+            <option value="">All</option>
+            {journals.map((j) => (
+              <option key={j} value={j}>
+                {j}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="text-xs text-gray-500 block">Status</label>
+          <select
+            value={filters.status}
+            onChange={(e) => {
+              setFilters({ ...filters, status: e.target.value });
+              setPage(0);
+            }}
+            className="border border-gray-300 rounded px-2 py-1"
+          >
+            <option value="">All</option>
+            {STATUS_ORDER.map((s) => (
+              <option key={s} value={s}>
+                {STATUS_LABELS[s]}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+
+      <div className="text-xs text-gray-500 mb-2">
+        {total.toLocaleString()} matching papers · showing{" "}
+        {total > 0 ? page * limit + 1 : 0}–{Math.min((page + 1) * limit, total)}
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="min-w-full text-sm">
+          <thead>
+            <tr className="text-left text-gray-500 border-b border-gray-200">
+              <th className="px-2 py-1 font-semibold">Year</th>
+              <th className="px-2 py-1 font-semibold">Journal</th>
+              <th className="px-2 py-1 font-semibold">Title</th>
+              <th className="px-2 py-1 font-semibold">Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {pageItems.map((p) => (
+              <tr
+                key={p.doi}
+                className="border-b border-gray-100 cursor-pointer hover:bg-blue-50"
+                onClick={() => setSelectedDoi(p.doi)}
+              >
+                <td className="px-2 py-1.5 text-gray-600">{p.publication_year}</td>
+                <td className="px-2 py-1.5 text-gray-600 text-xs">
+                  {p.journal_name || ""}
+                </td>
+                <td className="px-2 py-1.5 text-gray-900">{p.title}</td>
+                <td className="px-2 py-1.5">
+                  <StatusBadge status={p.replication_status} />
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      <div className="flex justify-between items-center mt-3 text-sm">
+        <button
+          disabled={page === 0}
+          onClick={() => setPage(page - 1)}
+          className="px-3 py-1 border border-gray-300 rounded disabled:opacity-40"
+        >
+          ← Prev
+        </button>
+        <span className="text-gray-500">
+          Page {page + 1} of {Math.ceil(total / limit) || 1}
+        </span>
+        <button
+          disabled={(page + 1) * limit >= total}
+          onClick={() => setPage(page + 1)}
+          className="px-3 py-1 border border-gray-300 rounded disabled:opacity-40"
+        >
+          Next →
+        </button>
+      </div>
+
+      {selectedDoi && detail && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50"
+          onClick={() => setSelectedDoi(null)}
+        >
+          <div
+            className="bg-white rounded-lg shadow-xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-6"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex justify-between items-start gap-4 mb-3">
+              <h2 className="text-lg font-bold text-gray-900">{detail.title}</h2>
+              <button
+                onClick={() => setSelectedDoi(null)}
+                className="text-gray-400 hover:text-gray-600 text-xl"
+              >
+                ×
+              </button>
+            </div>
+            <div className="text-sm text-gray-500 mb-3">
+              {detail.journal_name} · {detail.publication_year} ·{" "}
+              <a
+                href={`https://doi.org/${detail.doi}`}
+                target="_blank"
+                rel="noreferrer"
+                className="text-blue-600 hover:underline"
+              >
+                {detail.doi}
+              </a>
+            </div>
+            <div className="mb-3">
+              <StatusBadge status={detail.replication_status} />
+            </div>
+
+            {detail.repositories?.length > 0 && (
+              <div className="border-t border-gray-200 pt-3 mt-3">
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">
+                  Repositories ({detail.repositories.length})
+                </h3>
+                {detail.repositories.map((r, i) => (
+                  <div
+                    key={`${r.repo_doi}-${r.source}-${i}`}
+                    className="bg-gray-50 p-3 rounded mb-2 text-sm"
+                  >
+                    <div className="flex items-center gap-2 mb-1">
+                      {repositoryUrl(r) ? (
+                      <a
+                        href={repositoryUrl(r)}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="text-blue-600 hover:underline font-mono text-xs"
+                      >
+                        {repositoryLabel(r)}
+                      </a>
+                      ) : (
+                        <span className="font-mono text-xs text-gray-700">
+                          {repositoryLabel(r)}
+                        </span>
+                      )}
+                      <span className="text-xs text-gray-400">via {r.source}</span>
+                    </div>
+                    {r.data_availability && (
+                      <div className="text-xs text-gray-600">
+                        Data:{" "}
+                        <span className="font-medium">{r.data_availability}</span>
+                        {r.restriction_flags?.length > 0 && (
+                          <span className="ml-2">
+                            Flags: {r.restriction_flags.join(", ")}
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    {r.readme_text && (
+                      <details className="mt-2">
+                        <summary className="text-xs text-gray-500 cursor-pointer hover:text-gray-700">
+                          README excerpt ({r.readme_text.length} chars)
+                        </summary>
+                        <pre className="text-xs text-gray-700 bg-white p-2 mt-1 rounded border border-gray-200 max-h-64 overflow-y-auto whitespace-pre-wrap">
+                          {r.readme_text.substring(0, 2000)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Methodology() {
+  const [open, setOpen] = useState(false);
+  return (
+    <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
+      <button
+        onClick={() => setOpen(!open)}
+        className="flex items-center gap-2 text-sm font-semibold text-gray-700 w-full text-left"
+      >
+        <span>{open ? "▾" : "▸"}</span>
+        Methodology
+      </button>
+      {open && (
+        <div className="mt-3 text-sm text-gray-700 space-y-3 leading-relaxed">
+          <p>
+            This tracker classifies replication-package data availability for
+            <em> Journal of Political Economy</em>,{" "}
+            <em>Journal of Political Economy Macroeconomics</em>,{" "}
+            <em>Journal of Political Economy Microeconomics</em>,{" "}
+            <em>The Economic Journal</em>, and <em>Econometrics Journal</em>.
+          </p>
+
+          <h4 className="font-semibold text-gray-800">Data collection</h4>
+          <p>
+            Paper metadata is harvested from{" "}
+            <a href="https://openalex.org" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">OpenAlex</a>.
+            Replication packages are linked from{" "}
+            <a href="https://dataverse.harvard.edu/dataverse/JPE" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Harvard Dataverse (JPE)</a>{" "}
+            and{" "}
+            <a href="https://zenodo.org/communities/ej-replication-repository" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Zenodo (EJ)</a>{" "}
+            plus{" "}
+            <a href="https://zenodo.org/communities/ectj-replication-repository" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">Zenodo (ECTJ)</a>.
+            README files are downloaded from each repository host API when available.
+          </p>
+
+          <h4 className="font-semibold text-gray-800">Classification</h4>
+          <p>
+            Each README is classified into one of three data availability categories
+            using{" "}
+            <a href="https://www.anthropic.com" target="_blank" rel="noreferrer" className="text-blue-600 hover:underline">
+              Claude Haiku
+            </a>{" "}
+            (Anthropic's fast, low-cost language model). The model receives the first
+            4,000 characters of the README text and returns a structured classification
+            with a one-sentence rationale. The three categories are:
+          </p>
+          <ul className="list-disc ml-5 space-y-1">
+            <li>
+              <strong>Full data</strong> — All data needed to replicate the paper are
+              included in the repository or freely available at a linked location
+              (e.g., Zenodo, Dataverse, GitHub). No restricted, confidential, or
+              proprietary data is required.
+            </li>
+            <li>
+              <strong>Partial data</strong> — Some data is included or publicly
+              available, but some requires restricted access, purchase, or a data use
+              agreement. Common examples: public data included but WRDS, census, or
+              proprietary data is not.
+            </li>
+            <li>
+              <strong>No data</strong> — No data can be shared. The replication package
+              contains only code, or all data is confidential/proprietary with no
+              public component.
+            </li>
+          </ul>
+
+          <h4 className="font-semibold text-gray-800">Why LLM classification?</h4>
+          <p>
+            An earlier version of this tracker used heuristic phrase matching (searching
+            for keywords like "confidential", "proprietary", "data use agreement"). This
+            approach missed context — for example, a README stating "data is publicly
+            available on Zenodo" could be misclassified if it also mentioned
+            "confidential" data in a different section. The LLM understands the full
+            context of the README and produces more accurate classifications with
+            transparent reasoning for each decision.
+          </p>
+
+          <h4 className="font-semibold text-gray-800">Limitations</h4>
+          <ul className="list-disc ml-5 space-y-1">
+            <li>
+              Coverage is limited to repositories discoverable in the target
+              Dataverse/Zenodo communities and successful paper-to-repository matches.
+            </li>
+            <li>
+              README text is truncated to 4,000 characters. Very long READMEs may
+              lose relevant information from later sections.
+            </li>
+            <li>
+              Classification is based solely on the README — it does not verify
+              whether linked data files actually exist or are accessible.
+            </li>
+          </ul>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function App() {
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <header className="bg-white border-b border-gray-200">
+        <div className="max-w-7xl mx-auto px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-gray-900">
+                Economics Replication Tracker
+              </h1>
+              <p className="text-sm text-gray-500 mt-0.5">
+                Data availability across JPE, EJ, and ECTJ articles
+              </p>
+            </div>
+            <a
+              href="https://github.com/paulgp/replication-package-db"
+              target="_blank"
+              rel="noreferrer"
+              className="text-gray-400 hover:text-gray-600"
+              title="View source on GitHub"
+            >
+              <svg height="24" width="24" viewBox="0 0 16 16" fill="currentColor">
+                <path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z" />
+              </svg>
+            </a>
+          </div>
+        </div>
+      </header>
+
+      <main className="max-w-7xl mx-auto p-6 space-y-6">
+        <Overview />
+        <ByYearChart />
+        <ByJournalTable yearStart={2000} yearEnd={2026} />
+        <Methodology />
+        <PaperBrowser />
+      </main>
+    </div>
+  );
+}

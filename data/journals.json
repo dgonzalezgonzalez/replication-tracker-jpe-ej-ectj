@@ -1,0 +1,42 @@
+[
+  {
+    "display_name": "Journal of Political Economy",
+    "homepage_url": "http://www.journals.uchicago.edu/toc/jpe/current",
+    "issn": "0022-3808",
+    "openalex_id": "S95323914",
+    "policy_start_year": null,
+    "works_count": 15855
+  },
+  {
+    "display_name": "Journal of Political Economy Macroeconomics",
+    "homepage_url": null,
+    "issn": "2832-9341",
+    "openalex_id": "S4387284021",
+    "policy_start_year": null,
+    "works_count": 85
+  },
+  {
+    "display_name": "Journal of Political Economy Microeconomics",
+    "homepage_url": null,
+    "issn": "2832-9368",
+    "openalex_id": "S4387282238",
+    "policy_start_year": null,
+    "works_count": 140
+  },
+  {
+    "display_name": "The Economic Journal",
+    "homepage_url": "https://academic.oup.com/ej",
+    "issn": "0013-0133",
+    "openalex_id": "S45992627",
+    "policy_start_year": null,
+    "works_count": 19896
+  },
+  {
+    "display_name": "Econometrics Journal",
+    "homepage_url": "https://academic.oup.com/ectj",
+    "issn": "1368-4221",
+    "openalex_id": "S33519306",
+    "policy_start_year": null,
+    "works_count": 797
+  }
+]
