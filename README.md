@@ -25,7 +25,16 @@ python3 scripts/run_pipeline_journals.py
 
 This generates:
 - `frontend/public/data/*.json`
-- `docs/index.html` (static dashboard build)
+- `docs/index.html` (GitHub Pages build)
+- `docs/index-local.html` (double-click local HTML file; no local server needed)
+
+## Open dashboard locally (double-click)
+
+After running the pipeline, open:
+
+- `docs/index-local.html`
+
+This file embeds all dashboard JSON data and works via `file://` (double-click).
 
 ## Optional flags
 

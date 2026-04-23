@@ -101,6 +101,10 @@ def main() -> int:
                 shutil.rmtree(docs_dir)
             shutil.copytree(PROJECT_ROOT / "frontend" / "dist", docs_dir)
             LOGGER.info("Synced docs/ from frontend/dist")
+            run_step(
+                "Build local double-click dashboard",
+                [sys.executable, "scripts/build_local_dashboard_html.py"],
+            )
 
         LOGGER.info("=" * 60)
         LOGGER.info("Pipeline finished successfully")
