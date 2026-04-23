@@ -36,6 +36,8 @@ After running the pipeline, open:
 
 This file embeds all dashboard JSON data and works via `file://` (double-click).
 
+Note: the dashboard view intentionally filters to papers from 2016 onward.
+
 ## Optional flags
 
 ```bash

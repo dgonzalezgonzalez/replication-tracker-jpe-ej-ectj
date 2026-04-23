@@ -35,6 +35,7 @@ const STATUS_COLORS = {
 };
 
 const BASE = import.meta.env.BASE_URL;
+const MIN_DASHBOARD_YEAR = 2016;
 
 function dataUrl(path) {
   return `${BASE}data/${path}`;
@@ -78,9 +79,19 @@ function StatusBadge({ status }) {
 function Overview() {
   const [data, setData] = useState(null);
   useEffect(() => {
-    fetch(dataUrl("stats-overview.json"))
+    fetch(dataUrl("papers.json"))
       .then((r) => r.json())
-      .then(setData);
+      .then((papers) => {
+        const byStatus = Object.fromEntries(STATUS_ORDER.map((s) => [s, 0]));
+        let total = 0;
+        papers.forEach((p) => {
+          if (!p.publication_year || p.publication_year < MIN_DASHBOARD_YEAR) return;
+          total += 1;
+          const s = p.replication_status || "unanalyzed_repo";
+          byStatus[s] = (byStatus[s] || 0) + 1;
+        });
+        setData({ total_papers: total, by_status: byStatus });
+      });
   }, []);
   if (!data) return <p className="text-gray-500">Loading…</p>;
   const total = data.total_papers;
@@ -111,40 +122,38 @@ function Overview() {
 }
 
 function ByYearChart() {
-  const [allData, setAllData] = useState([]);
   const [papers, setPapers] = useState([]);
   const [journals, setJournals] = useState([]);
   const [selectedJournal, setSelectedJournal] = useState("");
 
   useEffect(() => {
-    fetch(dataUrl("stats-by-year.json"))
-      .then((r) => r.json())
-      .then(setAllData);
     fetch(dataUrl("papers.json"))
       .then((r) => r.json())
       .then((p) => {
-        setPapers(p);
-        const js = [...new Set(p.map((x) => x.journal_name).filter(Boolean))].sort();
+        const filtered = p.filter(
+          (x) => x.publication_year && x.publication_year >= MIN_DASHBOARD_YEAR,
+        );
+        setPapers(filtered);
+        const js = [...new Set(filtered.map((x) => x.journal_name).filter(Boolean))].sort();
         setJournals(js);
       });
   }, []);
 
   const data = useMemo(() => {
-    if (!selectedJournal) return allData;
     const byYear = {};
-    papers
-      .filter((p) => p.journal_name === selectedJournal && p.publication_year)
-      .forEach((p) => {
-        const y = p.publication_year;
-        if (!byYear[y]) byYear[y] = { year: y, total: 0 };
-        const s = p.replication_status || "unanalyzed_repo";
-        byYear[y][s] = (byYear[y][s] || 0) + 1;
-        byYear[y].total += 1;
-      });
+    papers.forEach((p) => {
+      if (selectedJournal && p.journal_name !== selectedJournal) return;
+      const y = p.publication_year;
+      if (!y) return;
+      if (!byYear[y]) byYear[y] = { year: y, total: 0 };
+      const s = p.replication_status || "unanalyzed_repo";
+      byYear[y][s] = (byYear[y][s] || 0) + 1;
+      byYear[y].total += 1;
+    });
     return Object.values(byYear).sort((a, b) => a.year - b.year);
-  }, [allData, papers, selectedJournal]);
+  }, [papers, selectedJournal]);
 
-  if (!allData.length) return null;
+  if (!papers.length) return null;
   return (
     <div className="bg-white p-4 rounded-lg shadow-sm border border-gray-200">
       <div className="flex items-center justify-between mb-3">
@@ -189,9 +198,31 @@ function ByYearChart() {
 function ByJournalTable({ yearStart, yearEnd }) {
   const [data, setData] = useState([]);
   useEffect(() => {
-    fetch(dataUrl("stats-by-journal.json"))
+    fetch(dataUrl("papers.json"))
       .then((r) => r.json())
-      .then(setData);
+      .then((papers) => {
+        const byJournal = {};
+        papers.forEach((p) => {
+          const y = p.publication_year;
+          if (!y || y < MIN_DASHBOARD_YEAR) return;
+          if (yearStart && y < yearStart) return;
+          if (yearEnd && y > yearEnd) return;
+          const journal = p.journal_name || "Unknown";
+          if (!byJournal[journal]) {
+            byJournal[journal] = { journal, total: 0 };
+            STATUS_ORDER.forEach((s) => {
+              byJournal[journal][s] = 0;
+            });
+          }
+          const s = p.replication_status || "unanalyzed_repo";
+          byJournal[journal][s] = (byJournal[journal][s] || 0) + 1;
+          byJournal[journal].total += 1;
+        });
+        const rows = Object.values(byJournal).sort((a, b) =>
+          a.journal.localeCompare(b.journal),
+        );
+        setData(rows);
+      });
   }, [yearStart, yearEnd]);
   if (!data.length) return null;
   return (
@@ -241,7 +272,7 @@ function ByJournalTable({ yearStart, yearEnd }) {
 
 function PaperBrowser() {
   const [filters, setFilters] = useState({
-    year_start: 2000,
+    year_start: MIN_DASHBOARD_YEAR,
     year_end: 2026,
     journal: "",
     status: "",
@@ -253,12 +284,16 @@ function PaperBrowser() {
   const limit = 25;
 
   useEffect(() => {
-    fetch(dataUrl("journals.json"))
-      .then((r) => r.json())
-      .then(setJournals);
     fetch(dataUrl("papers.json"))
       .then((r) => r.json())
-      .then(setAllPapers);
+      .then((papers) => {
+        const filtered = papers.filter(
+          (p) => p.publication_year && p.publication_year >= MIN_DASHBOARD_YEAR,
+        );
+        setAllPapers(filtered);
+        const js = [...new Set(filtered.map((x) => x.journal_name).filter(Boolean))].sort();
+        setJournals(js);
+      });
   }, []);
 
   const filtered = useMemo(() => {
@@ -629,7 +664,7 @@ export default function App() {
       <main className="max-w-7xl mx-auto p-6 space-y-6">
         <Overview />
         <ByYearChart />
-        <ByJournalTable yearStart={2000} yearEnd={2026} />
+        <ByJournalTable yearStart={MIN_DASHBOARD_YEAR} yearEnd={2026} />
         <Methodology />
         <PaperBrowser />
       </main>
