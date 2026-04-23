@@ -44,3 +44,25 @@ Note: the dashboard view intentionally filters to papers from 2016 onward.
 python3 scripts/run_pipeline_journals.py --no-reset
 python3 scripts/run_pipeline_journals.py --skip-frontend-build
 ```
+
+## Conservative Zenodo metadata upgrade (no-README subset)
+
+To reduce false `unanalyzed_repo` only for Zenodo repos that currently have no usable README:
+
+```bash
+python3 scripts/09b_upgrade_zenodo_metadata.py --dry-run
+python3 scripts/09b_upgrade_zenodo_metadata.py
+```
+
+Optional:
+
+```bash
+python3 scripts/09b_upgrade_zenodo_metadata.py --refresh
+python3 scripts/09b_upgrade_zenodo_metadata.py --limit 100 --dry-run
+```
+
+Rules are conservative by design:
+- host restricted to Zenodo
+- source text restricted to metadata title/description
+- only upgrades to `full_data` (`all_data` internally)
+- any restriction signal blocks upgrade

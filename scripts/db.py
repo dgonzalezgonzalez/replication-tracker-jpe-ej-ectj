@@ -61,7 +61,10 @@ CREATE TABLE IF NOT EXISTS readme_analysis (
     readme_text TEXT,
     restriction_flags TEXT,    -- JSON array of matched phrases
     restriction_count INTEGER,
-    data_availability TEXT     -- 'all_data', 'partial_data', 'no_data', or NULL
+    data_availability TEXT,    -- 'all_data', 'partial_data', 'no_data', or NULL
+    metadata_evidence_source TEXT,
+    metadata_evidence_snippet TEXT,
+    metadata_upgraded_at TEXT
 );
 
 CREATE TABLE IF NOT EXISTS replication_scores (
