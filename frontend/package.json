@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "build:pages": "GITHUB_PAGES=1 vite build",
     "preview": "vite preview"
   },
   "dependencies": {

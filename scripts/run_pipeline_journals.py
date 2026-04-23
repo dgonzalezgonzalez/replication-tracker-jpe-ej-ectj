@@ -95,7 +95,7 @@ def main() -> int:
 
         if not args.skip_frontend_build:
             run_step("Install frontend deps", ["npm", "install", "--prefix", "frontend"])
-            run_step("Build frontend", ["npm", "run", "build", "--prefix", "frontend"])
+            run_step("Build frontend", ["npm", "run", "build:pages", "--prefix", "frontend"])
             docs_dir = PROJECT_ROOT / "docs"
             if docs_dir.exists():
                 shutil.rmtree(docs_dir)
