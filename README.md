@@ -45,7 +45,7 @@ python3 scripts/run_pipeline_journals.py --no-reset
 python3 scripts/run_pipeline_journals.py --skip-frontend-build
 ```
 
-## Conservative Zenodo metadata upgrade (no-README subset)
+## Conservative Zenodo metadata/tree upgrade (no-README subset)
 
 To reduce false `unanalyzed_repo` only for Zenodo repos that currently have no usable README:
 
@@ -63,6 +63,19 @@ python3 scripts/09b_upgrade_zenodo_metadata.py --limit 100 --dry-run
 
 Rules are conservative by design:
 - host restricted to Zenodo
-- source text restricted to metadata title/description
+- primary source is metadata title/description
+- fallback source is Zenodo archive preview tree (without full archive download)
 - only upgrades to `full_data` (`all_data` internally)
 - any restriction signal blocks upgrade
+
+Preview-tree fallback upgrades only when archive contents show:
+- README-like file
+- data-like files (e.g., `.dta`, `.csv`, `.xlsx`)
+- code/repro artifact files (e.g., `.do`, `.py`, `.r`) or dataset+open status
+
+Optional:
+
+```bash
+python3 scripts/09b_upgrade_zenodo_metadata.py --skip-preview-tree
+python3 scripts/09b_upgrade_zenodo_metadata.py --refresh --limit 200
+```

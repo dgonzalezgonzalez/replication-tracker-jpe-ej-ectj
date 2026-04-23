@@ -1,9 +1,8 @@
 {
   "by_journal": {
     "Econometrics Journal": {
-      "full_data": 3,
-      "no_repository": 670,
-      "unanalyzed_repo": 4
+      "full_data": 7,
+      "no_repository": 670
     },
     "Journal of Political Economy": {
       "full_data": 139,
@@ -22,19 +21,19 @@
       "partial_data": 1
     },
     "The Economic Journal": {
-      "full_data": 68,
+      "full_data": 393,
       "no_data": 3,
       "no_repository": 18556,
       "partial_data": 18,
-      "unanalyzed_repo": 385
+      "unanalyzed_repo": 60
     }
   },
   "by_status": {
-    "full_data": 211,
+    "full_data": 540,
     "no_data": 18,
     "no_repository": 33113,
     "partial_data": 66,
-    "unanalyzed_repo": 409
+    "unanalyzed_repo": 80
   },
   "by_year": {
     "1891": {
@@ -425,52 +424,53 @@
       "partial_data": 1
     },
     "2019": {
+      "full_data": 1,
       "no_repository": 156,
-      "partial_data": 1,
-      "unanalyzed_repo": 1
+      "partial_data": 1
     },
     "2020": {
+      "full_data": 2,
       "no_repository": 226,
-      "unanalyzed_repo": 4
+      "unanalyzed_repo": 2
     },
     "2021": {
-      "full_data": 7,
+      "full_data": 31,
       "no_repository": 161,
-      "unanalyzed_repo": 27
+      "unanalyzed_repo": 3
     },
     "2022": {
-      "full_data": 22,
+      "full_data": 74,
       "no_repository": 146,
       "partial_data": 1,
-      "unanalyzed_repo": 65
+      "unanalyzed_repo": 13
     },
     "2023": {
-      "full_data": 39,
+      "full_data": 109,
       "no_data": 3,
       "no_repository": 133,
       "partial_data": 20,
-      "unanalyzed_repo": 89
+      "unanalyzed_repo": 19
     },
     "2024": {
-      "full_data": 52,
+      "full_data": 124,
       "no_data": 5,
       "no_repository": 139,
       "partial_data": 14,
-      "unanalyzed_repo": 96
+      "unanalyzed_repo": 24
     },
     "2025": {
-      "full_data": 67,
+      "full_data": 158,
       "no_data": 7,
       "no_repository": 133,
       "partial_data": 18,
-      "unanalyzed_repo": 106
+      "unanalyzed_repo": 15
     },
     "2026": {
-      "full_data": 24,
+      "full_data": 41,
       "no_data": 2,
       "no_repository": 42,
       "partial_data": 10,
-      "unanalyzed_repo": 21
+      "unanalyzed_repo": 4
     }
   },
   "total_papers": 33817
