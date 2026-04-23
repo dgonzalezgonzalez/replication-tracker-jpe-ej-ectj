@@ -1,8 +1,9 @@
 {
   "by_journal": {
     "Econometrics Journal": {
+      "full_data": 3,
       "no_repository": 670,
-      "unanalyzed_repo": 7
+      "unanalyzed_repo": 4
     },
     "Journal of Political Economy": {
       "full_data": 139,
@@ -21,19 +22,19 @@
       "partial_data": 1
     },
     "The Economic Journal": {
-      "full_data": 15,
+      "full_data": 68,
       "no_data": 3,
       "no_repository": 18556,
       "partial_data": 18,
-      "unanalyzed_repo": 438
+      "unanalyzed_repo": 385
     }
   },
   "by_status": {
-    "full_data": 155,
+    "full_data": 211,
     "no_data": 18,
     "no_repository": 33113,
     "partial_data": 66,
-    "unanalyzed_repo": 465
+    "unanalyzed_repo": 409
   },
   "by_year": {
     "1891": {
@@ -433,43 +434,43 @@
       "unanalyzed_repo": 4
     },
     "2021": {
-      "full_data": 4,
+      "full_data": 7,
       "no_repository": 161,
-      "unanalyzed_repo": 30
+      "unanalyzed_repo": 27
     },
     "2022": {
-      "full_data": 12,
+      "full_data": 22,
       "no_repository": 146,
       "partial_data": 1,
-      "unanalyzed_repo": 75
+      "unanalyzed_repo": 65
     },
     "2023": {
-      "full_data": 33,
+      "full_data": 39,
       "no_data": 3,
       "no_repository": 133,
       "partial_data": 20,
-      "unanalyzed_repo": 95
+      "unanalyzed_repo": 89
     },
     "2024": {
-      "full_data": 41,
+      "full_data": 52,
       "no_data": 5,
       "no_repository": 139,
       "partial_data": 14,
-      "unanalyzed_repo": 107
+      "unanalyzed_repo": 96
     },
     "2025": {
-      "full_data": 48,
+      "full_data": 67,
       "no_data": 7,
       "no_repository": 133,
       "partial_data": 18,
-      "unanalyzed_repo": 125
+      "unanalyzed_repo": 106
     },
     "2026": {
-      "full_data": 17,
+      "full_data": 24,
       "no_data": 2,
       "no_repository": 42,
       "partial_data": 10,
-      "unanalyzed_repo": 28
+      "unanalyzed_repo": 21
     }
   },
   "total_papers": 33817
