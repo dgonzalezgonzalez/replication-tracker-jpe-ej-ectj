@@ -14,8 +14,22 @@ Local-first replication tracker for:
   - Harvard Dataverse (`JPE` dataverse)
   - Zenodo communities (`ej-replication-repository`, `ectj-replication-repository`)
 - Downloads repository file listings and README text (Dataverse/Zenodo APIs).
-- Classifies data availability (`full_data`, `partial_data`, `no_data`).
+- Converts weird-format README/docs using Microsoft MarkItDown plus fallback parsers.
+- Classifies data availability with precision-first guardrails (`full_data` assigned only on strong evidence).
 - Computes paper-level replication status and exports static dashboard JSON.
+
+## Environment setup
+
+```bash
+python3 -m venv .venv
+.venv/bin/pip install -r requirements.txt
+```
+
+`requirements.txt` installs MarkItDown directly from Microsoft repo:
+
+```text
+markitdown @ git+https://github.com/microsoft/markitdown.git#subdirectory=packages/markitdown
+```
 
 ## Run end-to-end
 

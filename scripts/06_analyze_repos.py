@@ -27,6 +27,7 @@ try:
         RESTRICTION_INDICATORS,
     )
     from db import get_connection, init_db
+    from readme_conversion import extract_text_from_bytes
 except ImportError:  # pragma: no cover
     from scripts.config import (
         DATA_DIR,
@@ -36,6 +37,7 @@ except ImportError:  # pragma: no cover
         RESTRICTION_INDICATORS,
     )
     from scripts.db import get_connection, init_db
+    from scripts.readme_conversion import extract_text_from_bytes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -396,56 +398,12 @@ def classify_file(filename: str, size_bytes: int) -> dict[str, Any]:
 # README text extraction
 # ---------------------------------------------------------------------------
 def extract_readme_text(raw_bytes: bytes, filename: str) -> str | None:
-    """Extract text from a README file (PDF, DOCX, TXT, MD)."""
+    """Extract text from a README file via shared converter helper."""
+    text = extract_text_from_bytes(raw_bytes, filename)
+    if text:
+        return text
     ext = Path(filename).suffix.lower()
-
-    if ext == ".pdf":
-        try:
-            import fitz  # PyMuPDF
-
-            pages_text: list[str] = []
-            with fitz.open(stream=raw_bytes, filetype="pdf") as doc:
-                for page_obj in doc:
-                    text = page_obj.get_text()
-                    if text:
-                        pages_text.append(text)
-            if pages_text:
-                return "\n\n".join(pages_text)
-            LOGGER.warning("No text extracted from PDF: %s", filename)
-            return None
-        except Exception as exc:
-            LOGGER.warning("Failed to extract text from PDF %s: %s", filename, exc)
-            return None
-
-    if ext == ".docx":
-        try:
-            import fitz
-
-            pages_text_d: list[str] = []
-            with fitz.open(stream=raw_bytes, filetype="docx") as doc:
-                for page_obj in doc:
-                    text = page_obj.get_text()
-                    if text:
-                        pages_text_d.append(text)
-            if pages_text_d:
-                return "\n\n".join(pages_text_d)
-            LOGGER.warning("No text extracted from DOCX: %s", filename)
-            return None
-        except Exception as exc:
-            LOGGER.warning("Failed to extract text from DOCX %s: %s", filename, exc)
-            return None
-
-    if ext in (".txt", ".md", ""):
-        try:
-            return raw_bytes.decode("utf-8")
-        except UnicodeDecodeError:
-            try:
-                return raw_bytes.decode("latin-1")
-            except Exception as exc:
-                LOGGER.warning("Failed to decode text file %s: %s", filename, exc)
-                return None
-
-    LOGGER.warning("Unsupported README format: %s", ext)
+    LOGGER.warning("README extraction returned empty (%s, ext=%s)", filename, ext)
     return None
 
 

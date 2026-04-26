@@ -9,3 +9,4 @@ python-dotenv
 playwright
 striprtf
 openpyxl
+markitdown @ git+https://github.com/microsoft/markitdown.git#subdirectory=packages/markitdown

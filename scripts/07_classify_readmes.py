@@ -33,9 +33,11 @@ if str(PROJECT_ROOT) not in sys.path:
 try:
     from config import DATA_DIR, RAW_DIR, RESTRICTION_INDICATORS
     from db import get_connection, init_db
+    from readme_conversion import extract_text_from_path
 except ImportError:  # pragma: no cover
     from scripts.config import DATA_DIR, RAW_DIR, RESTRICTION_INDICATORS
     from scripts.db import get_connection, init_db
+    from scripts.readme_conversion import extract_text_from_path
 
 LOGGER = logging.getLogger(__name__)
 
@@ -129,6 +131,15 @@ RESTRICTION_PHRASES = [
     "not publicly available",
 ]
 
+EXTERNAL_OPEN_REPO_HINTS = [
+    "zenodo.org",
+    "dataverse",
+    "github.com",
+    "osf.io",
+    "figshare.com",
+    "mendeley.com",
+]
+
 
 _TABLE_NOT_PROVIDED_RE = re.compile(
     r"\b(no|not provided|not included|not available|restricted)\b",
@@ -193,13 +204,14 @@ def _parse_data_availability_table(text: str) -> str | None:
     return "partial_data"
 
 
-def classify_data_availability(text: str) -> tuple[str, list[str]]:
+def classify_data_availability(text: str) -> tuple[str | None, list[str]]:
     """Classify README text into data availability categories.
 
     Returns (classification, matched_phrases) where classification is one of:
       - 'no_data': data is not included in the repository
       - 'partial_data': some data included, some restricted
       - 'all_data': all data is included
+      - None: no strong evidence either way (conservative fallback)
     """
     tl = text.lower()
 
@@ -230,6 +242,28 @@ def classify_data_availability(text: str) -> tuple[str, list[str]]:
                 return "partial_data", restrictions
             return "all_data", []
 
+    # Strong external open-data evidence (conservative):
+    # require both data-availability language and a known repository/link hint.
+    has_open_link = any(h in tl for h in EXTERNAL_OPEN_REPO_HINTS)
+    has_open_language = any(
+        phrase in tl
+        for phrase in (
+            "data are available at",
+            "data is available at",
+            "data and code are available at",
+            "publicly available at",
+            "available on zenodo",
+            "available on dataverse",
+            "deposited on zenodo",
+            "deposited in dataverse",
+        )
+    )
+    if has_open_link and has_open_language:
+        restrictions = [p for p in RESTRICTION_PHRASES if p in tl]
+        if restrictions:
+            return "partial_data", restrictions
+        return "all_data", []
+
     # Heuristic: count restriction indicator phrases
     restrictions = [p for p in RESTRICTION_PHRASES if p in tl]
 
@@ -238,52 +272,16 @@ def classify_data_availability(text: str) -> tuple[str, list[str]]:
     elif len(restrictions) == 1:
         return "partial_data", restrictions
     else:
-        return "all_data", []
+        # Precision-first default: do not promote to all_data without explicit evidence.
+        return None, []
 
 
 # ---------------------------------------------------------------------------
 # README text extraction
 # ---------------------------------------------------------------------------
 def extract_readme_text(file_path: Path) -> str | None:
-    """Extract text from a README file (PDF, DOCX, TXT, MD, HTML)."""
-    ext = file_path.suffix.lower()
-
-    if ext == ".pdf":
-        try:
-            import fitz
-
-            with fitz.open(str(file_path)) as doc:
-                pages = [p.get_text() for p in doc if p.get_text()]
-            return "\n\n".join(pages) if pages else None
-        except Exception as exc:
-            LOGGER.warning("PDF extraction failed for %s: %s", file_path.name, exc)
-            return None
-
-    if ext == ".docx":
-        try:
-            import fitz
-
-            with fitz.open(str(file_path)) as doc:
-                pages = [p.get_text() for p in doc if p.get_text()]
-            return "\n\n".join(pages) if pages else None
-        except Exception as exc:
-            LOGGER.warning("DOCX extraction failed for %s: %s", file_path.name, exc)
-            return None
-
-    if ext == ".html":
-        try:
-            raw = file_path.read_text(errors="replace")
-            return BeautifulSoup(raw, "html.parser").get_text()
-        except Exception:
-            return None
-
-    if ext in (".txt", ".md", ""):
-        try:
-            return file_path.read_text("utf-8")
-        except UnicodeDecodeError:
-            return file_path.read_text("latin-1")
-
-    return None
+    """Extract text from a README file via shared converter helper."""
+    return extract_text_from_path(file_path)
 
 
 # ---------------------------------------------------------------------------

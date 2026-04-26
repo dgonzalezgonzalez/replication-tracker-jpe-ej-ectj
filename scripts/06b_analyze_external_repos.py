@@ -38,6 +38,7 @@ try:
         RESTRICTION_INDICATORS,
     )
     from db import get_connection, init_db
+    from readme_conversion import extract_text_from_bytes
 except ImportError:  # pragma: no cover
     from scripts.config import (
         DATA_DIR,
@@ -47,6 +48,7 @@ except ImportError:  # pragma: no cover
         RESTRICTION_INDICATORS,
     )
     from scripts.db import get_connection, init_db
+    from scripts.readme_conversion import extract_text_from_bytes
 
 LOGGER = logging.getLogger(__name__)
 
@@ -152,91 +154,11 @@ def classify_file(filename: str, size_bytes: int) -> dict[str, Any]:
 
 
 def extract_readme_text(raw_bytes: bytes, filename: str) -> str | None:
+    text = extract_text_from_bytes(raw_bytes, filename)
+    if text:
+        return text
     ext = Path(filename).suffix.lower()
-    if ext == ".pdf":
-        try:
-            import fitz
-            pages = []
-            with fitz.open(stream=raw_bytes, filetype="pdf") as doc:
-                for p in doc:
-                    t = p.get_text()
-                    if t:
-                        pages.append(t)
-            return "\n\n".join(pages) if pages else None
-        except Exception as exc:
-            LOGGER.warning("PDF extract failed (%s): %s", filename, exc)
-            return None
-    if ext == ".docx":
-        try:
-            import fitz
-            pages = []
-            with fitz.open(stream=raw_bytes, filetype="docx") as doc:
-                for p in doc:
-                    t = p.get_text()
-                    if t:
-                        pages.append(t)
-            return "\n\n".join(pages) if pages else None
-        except Exception as exc:
-            LOGGER.warning("DOCX extract failed (%s): %s", filename, exc)
-            return None
-    if ext in (".txt", ".md", ".rst", ""):
-        for enc in ("utf-8", "latin-1"):
-            try:
-                return raw_bytes.decode(enc)
-            except UnicodeDecodeError:
-                continue
-        return None
-    if ext == ".rtf":
-        try:
-            from striprtf.striprtf import rtf_to_text
-            for enc in ("utf-8", "latin-1"):
-                try:
-                    raw_str = raw_bytes.decode(enc)
-                    break
-                except UnicodeDecodeError:
-                    continue
-            else:
-                return None
-            text = rtf_to_text(raw_str, errors="ignore")
-            return text or None
-        except Exception as exc:
-            LOGGER.warning("RTF extract failed (%s): %s", filename, exc)
-            return None
-    if ext in (".html", ".htm"):
-        try:
-            from bs4 import BeautifulSoup
-            for enc in ("utf-8", "latin-1"):
-                try:
-                    raw_str = raw_bytes.decode(enc)
-                    break
-                except UnicodeDecodeError:
-                    continue
-            else:
-                return None
-            soup = BeautifulSoup(raw_str, "html.parser")
-            text = soup.get_text("\n", strip=True)
-            return text or None
-        except Exception as exc:
-            LOGGER.warning("HTML extract failed (%s): %s", filename, exc)
-            return None
-    if ext == ".xlsx":
-        try:
-            from openpyxl import load_workbook
-            from io import BytesIO
-            wb = load_workbook(BytesIO(raw_bytes), read_only=True, data_only=True)
-            parts: list[str] = []
-            for sheet in wb.worksheets:
-                parts.append(f"[{sheet.title}]")
-                for row in sheet.iter_rows(values_only=True):
-                    cells = [str(c) for c in row if c is not None]
-                    if cells:
-                        parts.append("\t".join(cells))
-            text = "\n".join(parts)
-            return text or None
-        except Exception as exc:
-            LOGGER.warning("XLSX extract failed (%s): %s", filename, exc)
-            return None
-    LOGGER.warning("Unsupported README ext for %s: %s", filename, ext)
+    LOGGER.warning("README extraction returned empty (%s, ext=%s)", filename, ext)
     return None
 
 
