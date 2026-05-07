@@ -41,10 +41,10 @@ except ImportError:  # pragma: no cover
 
 LOGGER = logging.getLogger(__name__)
 
-ZENODO_API = "https://zenodo.org/api/communities/{community}/records"
+ZENODO_API = "https://zenodo.org/api/records"
 REQUEST_TIMEOUT = 30
 RATE_LIMIT_SLEEP = 0.2
-PAGE_SIZE = 100
+PAGE_SIZE = 25
 TITLE_MATCH_THRESHOLD = 0.82
 SUBSTRING_MIN_LEN = 24
 MAX_RETRIES = 5
@@ -140,13 +140,17 @@ def fetch_community_records(session: requests.Session, community: str) -> list[d
     all_hits: list[dict[str, Any]] = []
 
     while True:
-        url = ZENODO_API.format(community=community)
+        url = ZENODO_API
         payload: dict[str, Any] | None = None
         for attempt in range(1, MAX_RETRIES + 1):
             try:
                 resp = session.get(
                     url,
-                    params={"page": page, "size": PAGE_SIZE},
+                    params={
+                        "q": f"communities:{community}",
+                        "page": page,
+                        "size": PAGE_SIZE,
+                    },
                     timeout=REQUEST_TIMEOUT,
                 )
                 if resp.status_code in {429, 500, 502, 503, 504}:

@@ -89,6 +89,7 @@ def main() -> int:
             "Analyze external repos",
             [sys.executable, "scripts/06b_analyze_external_repos.py", "--hosts", "dataverse,zenodo"],
         )
+        run_step("Analyze JPE GitHub repos", [sys.executable, "scripts/06c_analyze_jpe_github.py"])
         run_step("Classify README texts", [sys.executable, "scripts/09a_reclassify_readmes.py"])
         run_step("Compute scores", [sys.executable, "scripts/09_compute_scores.py"])
         run_step("Export static data", [sys.executable, "scripts/export_static_data.py"])
